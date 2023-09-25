@@ -75,10 +75,24 @@ async function createExerciseLog(id, data) {
   }
 }
 
-async function getUserLogs(id) {
+async function getUserLogs(conditions, limit) {
   try {
-    const userDoc = await User.findOne({ _id: id }).select({ __v: 0, "log._id": 0 });
+    const userDoc = await User.findOne(conditions).select({ __v: 0, "log._id": 0 }).exec();
     const user = userDoc.toObject();
+
+    if (conditions["log.date"]) {
+      const fromDate = conditions["log.date"].$gte || new Date(-8640000000000000);
+      const toDate = conditions["log.date"].$lte || new Date(8640000000000000);
+
+      user.log = user.log.filter((logEntry) => {
+        const logDate = new Date(logEntry.date);
+        return logDate >= fromDate && logDate <= toDate;
+      });
+    }
+
+    if (limit !== undefined) {
+      user.log = user.log.slice(0, limit);
+    }
 
     user.log.forEach((log) => {
       log.date = log.date.toDateString();

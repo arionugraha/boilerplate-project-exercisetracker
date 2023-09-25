@@ -46,7 +46,24 @@ app.post("/api/users/:id/exercises", async (req, res) => {
 
 app.get("/api/users/:id/logs", async (req, res) => {
   try {
-    const user = await db.getUserLogs(req.params.id);
+    let conditions = { _id: req.params.id };
+
+    if (req.query.from || req.query.to) {
+      const dateConditions = {};
+
+      if (req.query.from) {
+        dateConditions.$gte = new Date(req.query.from);
+      }
+
+      if (req.query.to) {
+        dateConditions.$lte = new Date(req.query.to);
+      }
+
+      conditions = { ...conditions, "log.date": dateConditions };
+    }
+
+    const logLimit = req.query.limit ? parseInt(req.query.limit) : undefined;
+    const user = await db.getUserLogs(conditions, logLimit);
     return res.json(user);
   } catch (error) {
     res.status(500).json({ error: error.message });
